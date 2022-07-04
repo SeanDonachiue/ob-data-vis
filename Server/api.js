@@ -2,6 +2,7 @@
 import mongoose from 'mongoose';
 import express from 'express';
 import TokenModel, {TimestampModel} from './token.js';
+import AggregatedStampModel from './aggregatedStamp.js';
 var router = express.Router();
 
   
@@ -17,16 +18,53 @@ useUnifiedTopology: true }, function(error) {
     }
 });
 
+router.get('/', (req, res) => {
+    console.log("it receives")
+    res.send("it receives requests")
+})
 //how do I want the data presented?
 //most useful thing is just the OB depth but I guess just send all the observations and deal with weird pairs on the client side
 router.get('/tokenusd', (req, res) => {
     TokenModel.find({ token: req.body.token }, (err, tokenList) => {
         if(err) console.log(err);
         else res.send(tokenList); //ideally this works but may need to destructure into a new object.
-    })
+    });
 });
 router.get('/tokeneth', (req, res) => {
 
+});
+
+router.get('/aggtokenusd', (req, res) => {
+    console.log("req received")
+    console.log(req.query.token);
+    AggregatedStampModel.find({ token: req.query.token}, (err, aggregatedStamps) => {
+        if (err) console.log(err);
+        else {
+            console.log(aggregatedStamps);
+            res.send(aggregatedStamps);
+        }
+    });
+});
+
+router.post('/addAggregatedStamps', (req, res) => {
+    let inputData = JSON.parse(req.body.data);
+    //input is going to be one AggregatedStampModel
+    let newAggStamp = new AggregatedStampModel();
+    newAggStamp.token = inputData.token;
+    newAggStamp.stamp = inputData.stamp;
+    newAggStamp.price = parseFloat(inputData.price);
+    newAggStamp.obup = parseFloat(inputData.obup);
+    newAggStamp.obdown = parseFloat(inputData.obdown);
+    newAggStamp.volume = parseFloat(inputData.volume);
+
+    newAggStamp.save((err, data, numRows) => {
+        if(err) console.log('Error: ' + err);
+        else {
+            console.log("New Aggregated Timestamp Saved: ");
+            console.log("data: " + data);
+        }
+    })
+    res.send("finished attempting to save data");
 });
 
 //ONE METHOD TO CREATE AND UPDATE ALL NECESSARY OBSERVATIONS
@@ -87,50 +125,6 @@ router.post('/addObservations', (req, res) => {
         });
     }
     res.send("finished attempting to save data");
-    // newToken.ticker = req.body.data.ticker;
-    // console.log(newToken.ticker);
-    // newToken.pair = req.body.data.pair;
-    // newToken.exchange = req.body.exchange;
-    // var newStamp = new TimestampModel();
-    // newStamp.stamp = new Date().toISOString();
-    // newStamp.price = req.body.price;
-    // newStamp.obup = req.body.up;
-    // newStamp.obdown = req.body.down;
-    // newStamp.volume = req.body.volume;
-
-    // TokenModel.findOne({ pair: req.body.pair, exchange: req.body.exchange }, (err, exchPair) => {
-    //     //check exchange token pair against db, if none stored, save
-    //     if(err || exchPair == null) {
-    //         console.log(err);
-    //         console.log("Attempting to save new token pair");
-
-    //         newToken.timestamps.push(newStamp);
-    //         newToken.save((err, data, numRows) => {
-    //             if (err) {
-    //                 console.log(err);
-    //             }
-    //             else {
-    //                 res.send("New token saved");
-    //                 console.log(data);
-    //             }
-    //         });
-    //     }
-    //     //else exchange pair exists, just append timestamp to existing pair
-    //     else {
-    //         console.log(err);
-    //         console.log("Attempting to save new timestamp to existing token");
-    //         exchPair.timestamps.push(newStamp);
-    //         exchPair.save((err, data, numRows) => {
-    //             if (err) {
-    //                 console.log(err);
-    //             }
-    //             else {
-    //                 res.send("New timestamp saved to " + exchPair.pair);
-    //                 console.log(data);
-    //             }
-    //         });
-    //     }
-    // });
 });
 
 //have to find the associated token pair in db first
